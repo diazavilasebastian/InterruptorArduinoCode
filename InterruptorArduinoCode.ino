@@ -96,7 +96,6 @@ void loop(){
   switch(estado){
     case 1:
       imprimirInterruptor();
-      Serial.println(analogRead(LDR));
       break;
 
     case 2:
@@ -155,7 +154,7 @@ void encenderLuz(){
 }
 
 void imprimirInterruptor(){
-  Serial.println("Estado:"+String(estado)+" Grupo:"+grupo);
+  Serial.println("Nombre:"+nombre+" Estado:"+String(estado)+" Grupo:"+grupo);
 }
 
 
