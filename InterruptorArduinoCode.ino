@@ -13,7 +13,7 @@ int estado = 1;
 int luzOn = 0;
 int distancia = 100;
 int luz = 1;
-int tiempoencendida = 1000; //10 seg
+long tiempoencendida = 1000; //1seg
 //********sensores***********
 //Movimiento
 int pirPin = 6;
@@ -40,6 +40,9 @@ unsigned long tiemposensor2=0;
 //********estado y botones luz***********
 bool ampolleta = false;
 bool ampolleta2 = false;
+
+int luzReal=0;
+
 
 unsigned long time;
 
@@ -84,15 +87,21 @@ void setup(){
   pinMode(pinAmpolleta, OUTPUT);
   pinMode(pinAmpolleta2, OUTPUT);
 
-  pinMode(trig, OUTPUT); /*activación del pin 9 como salida: para el pulso ultrasónico*/
-  pinMode(echo, INPUT); /*activación del pin 8 como entrada: tiempo del rebote del ultrasonido*/
-  // Assign callback function
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT); 
+
   button.pressHandler(onPress);
   button2.pressHandler(onPress2);
 }
 
 void loop(){
   unsigned long currentMillis = millis();
+  int value= digitalRead(pirPin);
+  
+  if(!ampolleta && !ampolleta2){
+      luzReal  = analogRead(LDR);
+  }
+
   switch(estado){
     case 1:
       imprimirInterruptor();
@@ -101,15 +110,16 @@ void loop(){
     case 2:
       //Movimiento
       imprimirInterruptor();
-      if(analogRead(LDR) <= luz){
-       if(digitalRead(pirPin) == HIGH){
+      if(luzReal <= luz){
+       if(value == HIGH){
          ampolleta=true; 
          ampolleta2=true;   
         }else{
-            if ((unsigned long)(currentMillis - tiemposensor1) > tiempoencendida) {
+            if ((unsigned long)(currentMillis - tiemposensor1) > tiempoencendida+1000) {
                 ampolleta=false; 
                 ampolleta2=false;  
                 tiemposensor1 = currentMillis;
+        
              }
         }
       }
@@ -118,12 +128,12 @@ void loop(){
     default:
        //distancia
        imprimirInterruptor();
-      if(analogRead(LDR) <= luz){
+      if(luzReal <= luz){
         if(calcularDistancia() <= distancia){
            ampolleta=true; 
            ampolleta2=true;  
         }else{
-            if ((unsigned long)(currentMillis - tiemposensor2) > tiempoencendida) {
+            if ((unsigned long)(currentMillis - tiemposensor2) > tiempoencendida+1000) {
                 ampolleta=false; 
                 ampolleta2=false;  
                 tiemposensor2 = currentMillis;
@@ -134,27 +144,28 @@ void loop(){
   }
   encenderLuz();
   SerialInputData();
-  // update the buttons' internalz
+
   button.process();
   button2.process();
 }
 
 void encenderLuz(){
   if(ampolleta){
-    digitalWrite(pinAmpolleta,HIGH);
-  }else{
     digitalWrite(pinAmpolleta,LOW);
+  }else{
+    digitalWrite(pinAmpolleta,HIGH);
   }
   if(ampolleta2){
-    digitalWrite(pinAmpolleta2,HIGH);
-  }else{
     digitalWrite(pinAmpolleta2,LOW);
+  }else{
+    digitalWrite(pinAmpolleta2,HIGH);
   }
   
 }
 
 void imprimirInterruptor(){
-  Serial.println("Nombre:"+nombre+" Estado:"+String(estado)+" Grupo:"+grupo);
+  Serial.println("Nombre:"+nombre+" Estado:"+String(estado)+" Grupo:"+grupo+" encendida:"+luzOn+" distancia:"+distancia+" luz:"+luz+" retardo:"+tiempoencendida);
+  
 }
 
 
@@ -178,7 +189,7 @@ void SerialInputData(){
      distancia = valueString(5,data).toInt();
      luz = valueString(6,data).toInt();
      int tiempoencendidatmp = valueString(7,data).toInt(); 
-     tiempoencendida = tiempoencendidatmp*1000;
+     tiempoencendida = tiempoencendidatmp;
      if(estado == 1){
         if(luzOn == 1){
           ampolleta = true;
@@ -210,17 +221,14 @@ long calcularDistancia(){
   long distancia2;
   long tiempo;
   
-  digitalWrite(trig,LOW); /* Por cuestión de estabilización del sensor*/
+  digitalWrite(trig,LOW); 
   delayMicroseconds(5);
   
-  digitalWrite(trig, HIGH); /* envío del pulso ultrasónico*/
+  digitalWrite(trig, HIGH); 
   delayMicroseconds(10);
-  tiempo=pulseIn(echo, HIGH); /* Función para medir la longitud del pulso entrante. Mide el tiempo que transcurrido entre el envío
-  del pulso ultrasónico y cuando el sensor recibe el rebote, es decir: desde que el pin 8 empieza a recibir el rebote, HIGH, hasta que
-  deja de hacerlo, LOW, la longitud del pulso entrante*/
+  tiempo=pulseIn(echo, HIGH);
   
-  distancia2= int(0.017*tiempo); /*fórmula para calcular la distancia obteniendo un valor entero*/
-  /*Monitorización en centímetros por el monitor serial*/
+  distancia2= int(0.017*tiempo); 
   return distancia2;
   
 }
